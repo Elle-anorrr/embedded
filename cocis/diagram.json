@@ -1,0 +1,70 @@
+{
+  "version": 1,
+  "author": "CoCIS group",
+  "editor": "wokwi",
+  "parts": [
+    { "type": "board-esp32-devkit-c-v4", "id": "esp", "top": 0, "left": 0, "attrs": {} },
+
+    { "type": "board-mfrc522", "id": "rfid_in",  "top": -150, "left": -260, "attrs": { "uid": "01:02:03:04" } },
+    { "type": "board-mfrc522", "id": "rfid_out", "top": 60,   "left": -260, "attrs": { "uid": "01:02:03:04" } },
+
+    { "type": "wokwi-microsd-card", "id": "sd", "top": -150, "left": 240, "attrs": {} },
+
+    { "type": "wokwi-servo", "id": "servo_in",  "top": -120, "left": 400, "attrs": {} },
+    { "type": "wokwi-servo", "id": "servo_out", "top": 20,   "left": 400, "attrs": {} },
+
+    { "type": "wokwi-buzzer", "id": "buzzer", "top": 180, "left": 250, "attrs": { "volume": "0.1" } },
+
+    { "type": "wokwi-led", "id": "led_g", "top": 220, "left": 100, "attrs": { "color": "limegreen" } },
+    { "type": "wokwi-led", "id": "led_r", "top": 220, "left": 160, "attrs": { "color": "red" } },
+    { "type": "wokwi-resistor", "id": "r_g", "top": 300, "left": 90,  "attrs": { "value": "220" } },
+    { "type": "wokwi-resistor", "id": "r_r", "top": 300, "left": 150, "attrs": { "value": "220" } }
+  ],
+  "connections": [
+    [ "esp:TX", "$serialMonitor:RX", "", [] ],
+    [ "esp:RX", "$serialMonitor:TX", "", [] ],
+
+    [ "esp:18", "rfid_in:SCK",   "green",  [] ],
+    [ "esp:19", "rfid_in:MISO",  "blue",   [] ],
+    [ "esp:23", "rfid_in:MOSI",  "purple", [] ],
+    [ "esp:21", "rfid_in:SDA",   "orange", [] ],
+    [ "esp:16", "rfid_in:RST",   "gray",   [] ],
+    [ "esp:3V3", "rfid_in:3.3V", "red",    [] ],
+    [ "esp:GND.1", "rfid_in:GND", "black", [] ],
+
+    [ "esp:18", "rfid_out:SCK",  "green",  [] ],
+    [ "esp:19", "rfid_out:MISO", "blue",   [] ],
+    [ "esp:23", "rfid_out:MOSI", "purple", [] ],
+    [ "esp:22", "rfid_out:SDA",  "orange", [] ],
+    [ "esp:17", "rfid_out:RST",  "gray",   [] ],
+    [ "esp:3V3", "rfid_out:3.3V", "red",   [] ],
+    [ "esp:GND.1", "rfid_out:GND", "black", [] ],
+
+    [ "esp:18", "sd:SCK", "green",  [] ],
+    [ "esp:19", "sd:DO",  "blue",   [] ],
+    [ "esp:23", "sd:DI",  "purple", [] ],
+    [ "esp:5",  "sd:CS",  "orange", [] ],
+    [ "esp:3V3", "sd:VCC", "red",   [] ],
+    [ "esp:GND.2", "sd:GND", "black", [] ],
+
+    [ "esp:25", "servo_in:PWM",  "orange", [] ],
+    [ "esp:5V", "servo_in:V+",   "red",    [] ],
+    [ "esp:GND.2", "servo_in:GND", "black", [] ],
+
+    [ "esp:26", "servo_out:PWM", "orange", [] ],
+    [ "esp:5V", "servo_out:V+",  "red",    [] ],
+    [ "esp:GND.2", "servo_out:GND", "black", [] ],
+
+    [ "esp:27", "buzzer:2", "orange", [] ],
+    [ "esp:GND.2", "buzzer:1", "black", [] ],
+
+    [ "esp:32", "r_g:1", "green", [] ],
+    [ "r_g:2", "led_g:A", "green", [] ],
+    [ "led_g:C", "esp:GND.2", "black", [] ],
+
+    [ "esp:33", "r_r:1", "red", [] ],
+    [ "r_r:2", "led_r:A", "red", [] ],
+    [ "led_r:C", "esp:GND.2", "black", [] ]
+  ],
+  "dependencies": {}
+}
