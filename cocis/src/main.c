@@ -7,6 +7,7 @@
 #include "cocis_common.h"
 #include "rfid.h"
 #include "door.h"
+#include "cli.h"
 
 static const char *TAG = "test";
 #define TEST_VALID_UID "01020304"
@@ -14,6 +15,7 @@ static const char *TAG = "test";
 void app_main(void)
 {
     common_init();
+    cli_start();
     ESP_ERROR_CHECK(rfid_bus_init());
     ESP_ERROR_CHECK(rfid_init(RFID_IN,  PIN_RFID_IN_CS,  PIN_RFID_IN_RST));
     ESP_ERROR_CHECK(rfid_init(RFID_OUT, PIN_RFID_OUT_CS, PIN_RFID_OUT_RST));
