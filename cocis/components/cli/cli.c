@@ -9,11 +9,15 @@
 
 static int cmd_help(int argc, char **argv);
 static int cmd_ping(int argc, char **argv);
+static int cmd_login(int argc, char **argv);
+static int cmd_logout(int argc, char **argv);
 
 /* One line per command. */
 static const cli_command_t commands[] = {
     {"help", "List all commands",       cmd_help},
     {"ping", "Check the CLI is alive",  cmd_ping},
+    {"login",  "Admin login: login <password>", cmd_login},
+    {"logout", "Log out of admin mode",   cmd_logout },
 };
 #define NUM_COMMANDS (sizeof(commands) / sizeof(commands[0]))
 
@@ -29,6 +33,68 @@ static int cmd_help(int argc, char **argv)
 static int cmd_ping(int argc, char **argv)
 {
     printf("pong\r\n");
+    return 0;
+}
+
+#define ADMIN_PASSWORD_TEMP "admin123"   /* temporary: replaced by an NVS hash later */
+#define MAX_FAILED          3
+#define LOCKOUT_MS          30000
+
+static bool logged_in = false;
+static int failed_attempts = 0;
+static bool locked = false;
+static TickType_t locked_at = 0;
+
+bool cli_is_admin(void)
+{
+    return logged_in;
+}
+
+static int cmd_login(int argc, char **argv)
+{
+    if (logged_in) {
+        printf("Already logged in.\r\n");
+        return 0;
+    }
+
+    if (locked) {
+        uint32_t elapsed_ms = (xTaskGetTickCount() - locked_at) * portTICK_PERIOD_MS;
+        if (elapsed_ms < LOCKOUT_MS) {
+            printf("Locked. Try again in %lu s.\r\n",
+                   (unsigned long)((LOCKOUT_MS - elapsed_ms) / 1000 + 1));
+            return -1;
+        }
+        locked = false;
+        failed_attempts = 0;
+    }
+
+    if (argc != 2) {
+        printf("Usage: login <password>\r\n");
+        return -1;
+    }
+
+    if (strcmp(argv[1], ADMIN_PASSWORD_TEMP) == 0) {
+        logged_in = true;
+        failed_attempts = 0;
+        printf("Login successful.\r\n");
+        return 0;
+    }
+
+    failed_attempts++;
+    if (failed_attempts >= MAX_FAILED) {
+        locked = true;
+        locked_at = xTaskGetTickCount();
+        printf("Too many failed attempts. Locked for %d seconds.\r\n", LOCKOUT_MS / 1000);
+    } else {
+        printf("Wrong password. %d attempt(s) left.\r\n", MAX_FAILED - failed_attempts);
+    }
+    return -1;
+}
+
+static int cmd_logout(int argc, char **argv)
+{
+    logged_in = false;
+    printf("Logged out.\r\n");
     return 0;
 }
 
