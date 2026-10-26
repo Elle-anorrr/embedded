@@ -13,3 +13,6 @@ typedef struct {
 } cli_command_t;
 
 void cli_start(void);
+/*This is the function member 5 will call to check who may run schedule set and the emergency override.*/
+
+bool cli_iS_admin (void);
