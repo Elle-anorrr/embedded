@@ -4,6 +4,10 @@
 #include "driver/uart.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "nvs_flash.h"
+#include "nvs.h"
+#include "esp_random.h"
+#include "psa/crypto.h"
 
 #define CLI_UART UART_NUM_0
 
@@ -36,7 +40,69 @@ static int cmd_ping(int argc, char **argv)
     return 0;
 }
 
-#define ADMIN_PASSWORD_TEMP "admin123"   /* temporary: replaced by an NVS hash later */
+#define DEFAULT_PASSWORD "admin123"
+#define NVS_NS     "cli_auth"
+#define SALT_LEN   16
+#define HASH_LEN   32
+
+static uint8_t salt[SALT_LEN];
+static uint8_t stored_hash[HASH_LEN];
+static bool auth_ready = false;
+
+static bool hash_password(const uint8_t *s, const char *pw, uint8_t *out)
+{
+    uint8_t buf[SALT_LEN + CLI_MAX_LINE];
+    size_t pwlen = strlen(pw);
+    if (pwlen >= CLI_MAX_LINE) {
+        return false;
+    }
+    memcpy(buf, s, SALT_LEN);
+    memcpy(buf + SALT_LEN, pw, pwlen);
+    size_t out_len = 0;
+    return psa_hash_compute(PSA_ALG_SHA_256, buf, SALT_LEN + pwlen,
+                            out, HASH_LEN, &out_len) == PSA_SUCCESS;
+}
+
+static bool hashes_equal(const uint8_t *a, const uint8_t *b)
+{
+    uint8_t diff = 0;
+    for (int i = 0; i < HASH_LEN; i++) {
+        diff |= a[i] ^ b[i];
+    }
+    return diff == 0;
+}
+
+static void auth_init(void)
+{
+    esp_err_t err = nvs_flash_init();
+    if (err == ESP_ERR_NVS_NO_FREE_PAGES || err == ESP_ERR_NVS_NEW_VERSION_FOUND) {
+        nvs_flash_erase();
+        err = nvs_flash_init();
+    }
+    if (err != ESP_OK || psa_crypto_init() != PSA_SUCCESS) {
+        printf("Auth init failed: login disabled.\r\n");
+        return;
+    }
+
+    nvs_handle_t h;
+    if (nvs_open(NVS_NS, NVS_READWRITE, &h) != ESP_OK) {
+        printf("Auth storage failed: login disabled.\r\n");
+        return;
+    }
+
+    size_t slen = SALT_LEN, hlen = HASH_LEN;
+    if (nvs_get_blob(h, "salt", salt, &slen) != ESP_OK ||
+        nvs_get_blob(h, "hash", stored_hash, &hlen) != ESP_OK) {
+        esp_fill_random(salt, SALT_LEN);
+        hash_password(salt, DEFAULT_PASSWORD, stored_hash);
+        nvs_set_blob(h, "salt", salt, SALT_LEN);
+        nvs_set_blob(h, "hash", stored_hash, HASH_LEN);
+        nvs_commit(h);
+        printf("First boot: default admin password stored.\r\n");
+    }
+    nvs_close(h);
+    auth_ready = true;
+}
 #define MAX_FAILED          3
 #define LOCKOUT_MS          30000
 
