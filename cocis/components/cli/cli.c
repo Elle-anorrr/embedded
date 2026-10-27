@@ -15,6 +15,7 @@ static int cmd_help(int argc, char **argv);
 static int cmd_ping(int argc, char **argv);
 static int cmd_login(int argc, char **argv);
 static int cmd_logout(int argc, char **argv);
+static int cmd_passwd (int argc, char **argv);
 
 /* One line per command. */
 static const cli_command_t commands[] = {
@@ -22,6 +23,7 @@ static const cli_command_t commands[] = {
     {"ping", "Check the CLI is alive",  cmd_ping},
     {"login",  "Admin login: login <password>", cmd_login},
     {"logout", "Log out of admin mode",   cmd_logout },
+    {"passwd", "Change admin password: passwd <new>", cmd_passwd},
 };
 #define NUM_COMMANDS (sizeof(commands) / sizeof(commands[0]))
 
@@ -139,7 +141,8 @@ static int cmd_login(int argc, char **argv)
         return -1;
     }
 
-    if (strcmp(argv[1], ADMIN_PASSWORD_TEMP) == 0) {
+    uint8_t h[HASH_LEN];
+    if (auth_ready && hash_password(salt, argv[1], h) && hashes_equal(h, stored_hash)) {
         logged_in = true;
         failed_attempts = 0;
         printf("Login successful.\r\n");
@@ -161,6 +164,53 @@ static int cmd_logout(int argc, char **argv)
 {
     logged_in = false;
     printf("Logged out.\r\n");
+    return 0;
+}
+
+#define MIN_PASSWORD_LEN 6
+
+static int cmd_passwd(int argc, char **argv)
+{
+    if (!logged_in) {
+        printf("Permission denied. Login first.\r\n");
+        return -1;
+    }
+    if (argc != 2) {
+        printf("Usage: passwd <new password> (no spaces)\r\n");
+        return -1;
+    }
+    if (strlen(argv[1]) < MIN_PASSWORD_LEN) {
+        printf("Too short. Minimum %d characters.\r\n", MIN_PASSWORD_LEN);
+        return -1;
+    }
+
+    uint8_t new_salt[SALT_LEN];
+    uint8_t new_hash[HASH_LEN];
+    esp_fill_random(new_salt, SALT_LEN);
+    if (!hash_password(new_salt, argv[1], new_hash)) {
+        printf("Could not hash the password.\r\n");
+        return -1;
+    }
+
+    nvs_handle_t h;
+    if (nvs_open(NVS_NS, NVS_READWRITE, &h) != ESP_OK) {
+        printf("Could not open storage. Password unchanged.\r\n");
+        return -1;
+    }
+    esp_err_t err = nvs_set_blob(h, "salt", new_salt, SALT_LEN);
+    if (err == ESP_OK) err = nvs_set_blob(h, "hash", new_hash, HASH_LEN);
+    if (err == ESP_OK) err = nvs_commit(h);
+    nvs_close(h);
+
+    if (err != ESP_OK) {
+        printf("Save failed. Password unchanged.\r\n");
+        return -1;
+    }
+
+    /* Only switch to the new values after they were saved. */
+    memcpy(salt, new_salt, SALT_LEN);
+    memcpy(stored_hash, new_hash, HASH_LEN);
+    printf("Password changed.\r\n");
     return 0;
 }
 
@@ -237,6 +287,7 @@ static void cli_task(void *arg)
 
 void cli_start(void)
 {
+    auth_init();
     uart_driver_install(CLI_UART, 256, 0, 0, NULL, 0);
     xTaskCreate(cli_task, "cli", 4096, NULL, 5, NULL);
 }
