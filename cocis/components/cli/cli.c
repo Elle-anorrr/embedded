@@ -19,11 +19,11 @@ static int cmd_passwd (int argc, char **argv);
 
 /* One line per command. */
 static const cli_command_t commands[] = {
-    {"help", "List all commands",       cmd_help},
-    {"ping", "Check the CLI is alive",  cmd_ping},
-    {"login",  "Admin login: login <password>", cmd_login},
-    {"logout", "Log out of admin mode",   cmd_logout },
-    {"passwd", "Change admin password: passwd <new>", cmd_passwd},
+    {"help", "List all commands",       cmd_help , false },
+    {"ping", "Check the CLI is alive",  cmd_ping , false },
+    {"login",  "Admin login: login <password>", cmd_login, false },
+    {"logout", "Log out of admin mode",   cmd_logout , false },
+    {"passwd", "Change admin password: passwd <new>", cmd_passwd , true},
 };
 #define NUM_COMMANDS (sizeof(commands) / sizeof(commands[0]))
 
@@ -31,7 +31,7 @@ static int cmd_help(int argc, char **argv)
 {
     printf("Available commands:\r\n");
     for (size_t i = 0; i < NUM_COMMANDS; i++) {
-        printf("  %-10s %s\r\n", commands[i].name, commands[i].help);
+        printf("  %-10s %s%s\r\n", commands[i].name, commands[i].help ,commands[i].admin_only ? "[admin]" :"");
     }
     return 0;
 }
@@ -237,6 +237,10 @@ static void cli_execute(char *line)
 
     for (size_t i = 0; i < NUM_COMMANDS; i++) {
         if (strcmp(argv[0], commands[i].name) == 0) {
+            if (commands[i].admin_only && !cli_is_admin()) {
+                printf("Permission denied. Login first.\r\n");
+                return;
+            }
             commands[i].handler(argc, argv);
             return;
         }

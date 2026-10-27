@@ -10,6 +10,7 @@ typedef struct {
     const char *name;
     const char *help;
     cli_handler_t handler;
+    bool admin_only;
 } cli_command_t;
 
 void cli_start(void);
