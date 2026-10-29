@@ -26,6 +26,8 @@
 #define PIN_RFID_IN_RST    16
 #define PIN_RFID_OUT_CS    22
 #define PIN_RFID_OUT_RST   17
+#define PIN_RTC_SDA         4
+#define PIN_RTC_SCL        15
 #define PIN_SERVO_IN       25
 #define PIN_SERVO_OUT      26
 #define PIN_BUZZER         27
@@ -148,7 +150,10 @@ void auth_logout(void);
 void comms_init(void);                                 /* wifi + mqtt */
 void comms_publish_room(const room_status_t *s);       /* room boards call this */
 bool comms_get_room(uint8_t room_id, room_status_t *out); /* entrance reads cached state */
+bool rtc_init(void);
+bool rtc_get_time(time_t *out);
 bool within_schedule(time_t now);                      /* checks cfg under cfg_mutex */
+bool access_is_allowed(bool is_entry, bool currently_inside, time_t now);
 bool schedule_set(uint16_t start_min, uint16_t end_min);  /* admin only, caller checks auth */
 bool schedule_get(schedule_t *out);
 bool tag_is_registered(const char *uid);

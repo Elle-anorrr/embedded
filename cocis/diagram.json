@@ -9,6 +9,7 @@
     { "type": "board-mfrc522", "id": "rfid_out", "top": 60,   "left": -260, "attrs": { "uid": "01:02:03:04" } },
 
     { "type": "wokwi-microsd-card", "id": "sd", "top": -150, "left": 240, "attrs": {} },
+    { "type": "chip-ds1307", "id": "rtc", "top": -50, "left": 500, "attrs": {} },
 
     { "type": "wokwi-servo", "id": "servo_in",  "top": -120, "left": 400, "attrs": {} },
     { "type": "wokwi-servo", "id": "servo_out", "top": 20,   "left": 400, "attrs": {} },
@@ -46,6 +47,11 @@
     [ "esp:5",  "sd:CS",  "orange", [] ],
     [ "esp:3V3", "sd:VCC", "red",   [] ],
     [ "esp:GND.2", "sd:GND", "black", [] ],
+
+    [ "esp:4", "rtc:SDA", "green", [] ],
+    [ "esp:15", "rtc:SCL", "orange", [] ],
+    [ "esp:3V3", "rtc:VCC", "red", [] ],
+    [ "esp:GND.2", "rtc:GND", "black", [] ],
 
     [ "esp:25", "servo_in:PWM",  "orange", [] ],
     [ "esp:5V", "servo_in:V+",   "red",    [] ],

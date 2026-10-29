@@ -1,6 +1,7 @@
 #include "cli.h"
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 #include "driver/uart.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -8,6 +9,7 @@
 #include "nvs.h"
 #include "esp_random.h"
 #include "psa/crypto.h"
+#include "cocis_common.h"
 
 #define CLI_UART UART_NUM_0
 
@@ -15,7 +17,8 @@ static int cmd_help(int argc, char **argv);
 static int cmd_ping(int argc, char **argv);
 static int cmd_login(int argc, char **argv);
 static int cmd_logout(int argc, char **argv);
-static int cmd_passwd (int argc, char **argv);
+static int cmd_passwd(int argc, char **argv);
+static int cmd_schedule(int argc, char **argv);
 
 /* One line per command. */
 static const cli_command_t commands[] = {
@@ -24,6 +27,7 @@ static const cli_command_t commands[] = {
     {"login",  "Admin login: login <password>", cmd_login, false },
     {"logout", "Log out of admin mode",   cmd_logout , false },
     {"passwd", "Change admin password: passwd <new>", cmd_passwd , true},
+    {"schedule", "Set schedule HHMM-HHMM (admin)", cmd_schedule, true},
 };
 #define NUM_COMMANDS (sizeof(commands) / sizeof(commands[0]))
 
@@ -211,6 +215,55 @@ static int cmd_passwd(int argc, char **argv)
     memcpy(salt, new_salt, SALT_LEN);
     memcpy(stored_hash, new_hash, HASH_LEN);
     printf("Password changed.\r\n");
+    return 0;
+}
+
+static int cmd_schedule(int argc, char **argv)
+{
+    if (argc != 2) {
+        printf("Usage: schedule <HHMM-HHMM>\r\n");
+        return -1;
+    }
+
+    if (!logged_in) {
+        printf("Permission denied. Login first.\r\n");
+        return -1;
+    }
+
+    char *dash = strchr(argv[1], '-');
+    if (!dash) {
+        printf("Bad format: use HHMM-HHMM\r\n");
+        return -1;
+    }
+
+    *dash = '\0';
+    char *start_txt = argv[1];
+    char *end_txt = dash + 1;
+
+    char *endptr = NULL;
+    long start = strtol(start_txt, &endptr, 10);
+    if (endptr == start_txt || *endptr != '\0' || start < 0 || start >= 2400) {
+        printf("Invalid start time.\r\n");
+        return -1;
+    }
+
+    endptr = NULL;
+    long end = strtol(end_txt, &endptr, 10);
+    if (endptr == end_txt || *endptr != '\0' || end < 0 || end >= 2400) {
+        printf("Invalid end time.\r\n");
+        return -1;
+    }
+
+    uint16_t start_min = (uint16_t)((start / 100) * 60 + (start % 100));
+    uint16_t end_min = (uint16_t)((end / 100) * 60 + (end % 100));
+
+    if (!schedule_set(start_min, end_min)) {
+        printf("Schedule rejected. Start and end must differ and be within 00:00-23:59.\r\n");
+        return -1;
+    }
+
+    printf("Schedule updated to %02ld:%02ld-%02ld:%02ld.\r\n",
+           start / 100, start % 100, end / 100, end % 100);
     return 0;
 }
 
