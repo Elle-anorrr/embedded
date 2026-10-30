@@ -138,7 +138,7 @@ static bool schedule_store_nvs_locked(void)
     return true;
 }
 
-bool rtc_init(void)
+bool ds1307_rtc_init(void)
 {
     i2c_config_t i2c_cfg = {
         .mode = I2C_MODE_MASTER,
@@ -292,7 +292,7 @@ void common_init(void)
 
     configASSERT(scan_queue && log_queue && occ_mutex && cfg_mutex && room_mutex);
 
-    if (!rtc_init()) {
+    if (!ds1307_rtc_init()) {
         ESP_LOGW(TAG, "RTC init failed; schedule checks need a valid RTC clock");
     }
 

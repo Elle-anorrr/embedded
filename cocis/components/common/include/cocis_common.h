@@ -141,7 +141,6 @@ void pir_task(void *arg);
 void light_task(void *arg);
 
 /* ---- Person 4: CLI and auth ---- */
-void cli_task(void *arg);
 bool auth_login(const char *user, const char *pass);   /* handles lockout */
 bool auth_is_admin(void);
 void auth_logout(void);
@@ -150,7 +149,7 @@ void auth_logout(void);
 void comms_init(void);                                 /* wifi + mqtt */
 void comms_publish_room(const room_status_t *s);       /* room boards call this */
 bool comms_get_room(uint8_t room_id, room_status_t *out); /* entrance reads cached state */
-bool rtc_init(void);
+bool ds1307_rtc_init(void);
 bool rtc_get_time(time_t *out);
 bool within_schedule(time_t now);                      /* checks cfg under cfg_mutex */
 bool access_is_allowed(bool is_entry, bool currently_inside, time_t now);
